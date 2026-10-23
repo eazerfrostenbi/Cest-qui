@@ -138,6 +138,50 @@ body {
   background: var(--line);
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.auth-tabs .btn {
+  min-height: 46px;
+  padding: 0 8px;
+  font-size: 0.9rem;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-info b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-info span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.avatar-preview {
+  width: 88px;
+  height: 88px;
+  align-self: center;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 /* ---------- Cartes ---------- */
 .card {
   background: var(--card);
@@ -190,7 +234,8 @@ body {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   background: #17123a;
   color: var(--text);
@@ -204,8 +249,13 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--accent);
+}
+
+select {
+  cursor: pointer;
 }
 
 textarea {
@@ -365,6 +415,14 @@ textarea {
   font-weight: 900;
   color: #1a1238;
   background: hsl(var(--h, 300) 75% 62%);
+  overflow: hidden;
+}
+
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar.lg {
@@ -377,6 +435,13 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.category-name {
+  margin: 0;
+  color: var(--accent2);
+  font-size: 1.2rem;
+  font-weight: 900;
 }
 
 .rounds > span {
