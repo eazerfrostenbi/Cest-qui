@@ -10,6 +10,14 @@
   const COLORS = ['#1a1238', '#ff4f5e', '#ff9f1c', '#ffd23f', '#37d99a', '#2ec4f1', '#4361ee', '#9b5de5', '#ff6ab0', '#8d5524', '#9e9e9e'];
   const SIZES = [4, 10, 22];
 
+  const svg = (d) =>
+    `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const ICON_EXPAND = svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>');
+  const ICON_SHRINK = svg('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>');
+  const ICON_PIPETTE = svg(
+    '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>'
+  );
+
   // État de l'étape en cours (remis à zéro à chaque nouvelle étape)
   let stepKey = '';
   let draft = '';
@@ -25,8 +33,32 @@
   let color = COLORS[0];
   let size = SIZES[1];
   let eraser = false;
+  let custom = '#ff7f50'; // couleur choisie avec le sélecteur ou la pipette
+  let picking = false; // pipette active : le prochain appui sur le dessin prend sa couleur
+  let full = false; // dessin en plein écran
 
+  // Révélation : l'écran de l'hôte fait défiler les pages tout seul
+  const TEXT_DELAY = 3500;
+  const DRAW_DELAY = 5500;
   let revealSeen = '';
+  let autoTimer = null;
+  let autoKey = '';
+
+  function clearAuto() {
+    clearTimeout(autoTimer);
+    autoTimer = null;
+    autoKey = '';
+  }
+
+  function scheduleAuto(key, at, delay) {
+    if (autoKey === key) return;
+    clearAuto();
+    autoKey = key;
+    autoTimer = setTimeout(() => {
+      autoTimer = null;
+      act({ type: 'next', at });
+    }, delay);
+  }
 
   function resetStep(key, g) {
     stepKey = key;
@@ -37,14 +69,39 @@
     canvas = null;
     strokes = [];
     current = null;
+    picking = false;
+    if (full) setFull(false);
   }
+
+  function rerender() {
+    const st = EG.s();
+    if (st && st.g && st.g.phase === 'play') renderPlay(st);
+  }
+
+  // Plein écran : la zone de dessin recouvre la page. Quand le navigateur le permet
+  // (ordinateur, Android), on masque aussi ses barres ; sur iPhone, seule la page s'adapte.
+  function setFull(on) {
+    full = on;
+    try {
+      const de = document.documentElement;
+      if (on && de.requestFullscreen && !document.fullscreenElement) de.requestFullscreen().catch(() => {});
+      if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    } catch (_) {}
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && full) {
+      full = false;
+      rerender();
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // Dessin
   // ---------------------------------------------------------------------------
   function pos(e) {
     const r = canvas.getBoundingClientRect();
-    if (!r.width) return current.pts[current.pts.length - 1];
+    if (!r.width) return null;
     return {
       x: Math.round(((e.clientX - r.left) * W) / r.width),
       y: Math.round(((e.clientY - r.top) * H) / r.height),
@@ -83,8 +140,17 @@
     canvas.addEventListener('pointerdown', (e) => {
       if (current) return; // un seul doigt à la fois
       e.preventDefault();
-      current = { id: e.pointerId, color: eraser ? '#fff' : color, size: eraser ? SIZES[2] : size, pts: [] };
-      current.pts.push(pos(e));
+      const p = pos(e);
+      if (!p) return;
+      if (picking) {
+        const [r, g, b] = ctx.getImageData(Math.min(W - 1, p.x), Math.min(H - 1, p.y), 1, 1).data;
+        color = custom = '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+        picking = false;
+        eraser = false;
+        updateTools();
+        return;
+      }
+      current = { id: e.pointerId, color: eraser ? '#fff' : color, size: eraser ? SIZES[2] : size, pts: [p] };
       strokes.push(current);
       drawStroke(current);
     });
@@ -94,6 +160,7 @@
     if (!current || !canvas || e.pointerId !== current.id) return;
     const last = current.pts[current.pts.length - 1];
     const p = pos(e);
+    if (!p) return;
     current.pts.push(p);
     ctx.strokeStyle = current.color;
     ctx.lineWidth = current.size;
@@ -110,11 +177,22 @@
   window.addEventListener('pointerup', endStroke);
   window.addEventListener('pointercancel', endStroke);
 
+  const isCustom = () => !eraser && !COLORS.includes(color);
+
   function updateTools() {
-    document.querySelectorAll('.swatch').forEach((b) => b.classList.toggle('on', !eraser && b.dataset.c === color));
+    document.querySelectorAll('.swatch[data-c]').forEach((b) => b.classList.toggle('on', !eraser && b.dataset.c === color));
     document.querySelectorAll('.sizebtn').forEach((b) => b.classList.toggle('on', !eraser && +b.dataset.s === size));
     const er = document.querySelector('[data-action="eraser"]');
     if (er) er.classList.toggle('on', eraser);
+    const pip = document.querySelector('[data-action="pipette"]');
+    if (pip) pip.classList.toggle('on', picking);
+    const pk = document.getElementById('picker');
+    if (pk) {
+      pk.value = custom;
+      pk.parentNode.style.setProperty('--c', custom);
+      pk.parentNode.classList.toggle('on', isCustom());
+    }
+    if (canvas) canvas.classList.toggle('picking', picking);
   }
 
   // ---------------------------------------------------------------------------
@@ -127,11 +205,10 @@
     const st = EG.s();
     if (!st || st.phase !== 'playing' || st.mode !== 'telephone' || !st.g || st.g.phase !== 'play') return;
     const left = secondsLeft();
-    const el = document.getElementById('timer');
-    if (el) {
+    document.querySelectorAll('.timer').forEach((el) => {
       el.textContent = fmt(left);
       el.classList.toggle('hurry', left <= 10);
-    }
+    });
     if (left === 0 && st.g.isParticipant && !st.g.submitted && !autoSent) {
       autoSent = true;
       submit(true);
@@ -153,8 +230,9 @@
       data = { type: 'submit', text, auto: !!auto };
     }
     sending = true;
-    act(data, () => {
+    act(data, (res) => {
       sending = false;
+      if (res && res.ok && full) setFull(false);
     });
   }
 
@@ -205,18 +283,31 @@
       const sizes = SIZES.map(
         (s) => `<button class="toolbtn sizebtn${!eraser && s === size ? ' on' : ''}" data-action="size" data-s="${s}" aria-label="Taille ${s}"><i style="--s:${Math.max(4, s * 0.8)}px"></i></button>`
       ).join('');
-      body = `<div class="card prompt"><p class="label">À dessiner</p><p>${esc(g.prompt || '…')}</p></div>
-        <div id="padSlot" class="padslot"></div>
+      body = `<div class="drawzone${full ? ' full' : ''}">
+        <div class="card prompt dz-prompt">
+          <div><p class="label">À dessiner</p><p>${esc(g.prompt || '…')}</p></div>
+          <div class="timer dz-timer">${fmt(secondsLeft())}</div>
+        </div>
+        <div id="padSlot" class="padslot">
+          <button class="fsbtn" data-action="fullscreen" aria-label="${full ? 'Quitter le plein écran' : 'Plein écran'}">${full ? ICON_SHRINK : ICON_EXPAND}</button>
+        </div>
         <div class="tools">
-          <div class="swatches">${swatches}</div>
+          <div class="swatches">
+            ${swatches}
+            <label class="swatch picker${isCustom() ? ' on' : ''}" style="--c:${custom}" aria-label="Couleur au choix">
+              <input type="color" id="picker" value="${custom}">
+            </label>
+          </div>
           <div class="toolrow">
             ${sizes}
+            <button class="toolbtn${picking ? ' on' : ''}" data-action="pipette" aria-label="Pipette">${ICON_PIPETTE}</button>
             <button class="toolbtn${eraser ? ' on' : ''}" data-action="eraser" aria-label="Gomme">🧽</button>
             <button class="toolbtn" data-action="undo" aria-label="Annuler">↩️</button>
             <button class="toolbtn" data-action="clear" aria-label="Tout effacer">🗑️</button>
           </div>
         </div>
-        <button class="btn primary big" data-action="send">J'ai fini !</button>`;
+        <button class="btn primary big" data-action="send">J'ai fini !</button>
+      </div>`;
     } else {
       body = `${
         g.image
@@ -254,20 +345,33 @@
     const slot = document.getElementById('padSlot');
     if (slot) {
       if (!canvas) makeCanvas();
+      canvas.classList.toggle('picking', picking);
       slot.appendChild(canvas);
     }
   }
 
-  function entryHtml(e) {
-    const verb = { write: 'a écrit', draw: 'a dessiné', guess: 'a deviné' }[e.kind];
+  function entryHtml(e, i, isNew) {
+    const verb = i === 0 ? 'phrase de départ' : { write: 'a écrit', draw: 'a dessiné', guess: 'a deviné' }[e.kind];
     let body;
     if (e.skipped) body = '<p class="anec muted">😴 Rien envoyé à temps</p>';
     else if (e.kind === 'draw') body = `<img class="drawing" src="${esc(e.img)}" alt="Dessin de ${esc(nameOf(e.by))}">`;
     else body = `<p class="anec">${esc(e.text)}</p>`;
-    return `<li class="entry ${e.kind}">
+    return `<li class="entry ${e.kind}${i === 0 ? ' first' : ''}${isNew ? ' new' : ''}">
       <div class="by">${avatar(e.by, nameOf(e.by))}<span class="pname">${esc(nameOf(e.by))}</span><small>${verb}${e.auto ? ' (au hasard)' : ''}</small></div>
       ${body}
     </li>`;
+  }
+
+  // Fin du carnet : la phrase de départ face à la dernière phrase devinée
+  function summaryHtml(entries) {
+    const texts = entries.filter((e) => !e.skipped && e.kind !== 'draw');
+    if (texts.length < 2) return '';
+    return `<div class="card center tp-summary">
+      <p class="label">Le grand écart</p>
+      <p class="anec">« ${esc(texts[0].text)} »</p>
+      <p class="arrow">⬇️</p>
+      <p class="anec">« ${esc(texts[texts.length - 1].text)} »</p>
+    </div>`;
   }
 
   function renderReveal(st) {
@@ -275,12 +379,28 @@
     const host = amHost();
     const lastEntry = g.entries.length >= g.entryCount;
     const lastAlbum = g.albumIndex + 1 >= g.albumCount;
-    const label = !lastEntry ? 'Suivant ▶' : !lastAlbum ? 'Carnet suivant' : 'Terminer';
+    const at = g.albumIndex + ':' + (g.entries.length - 1);
+    const seen = g.round + ':' + at;
+    const isNew = seen !== revealSeen;
+
+    let controls;
+    if (host && !lastEntry) {
+      controls = `<div class="tp-controls">
+          <button class="btn" data-action="pause">${g.paused ? '▶ Reprendre' : '⏸ Pause'}</button>
+          <button class="btn primary" data-action="next" data-at="${at}">Suivant ⏭</button>
+        </div>`;
+    } else if (host) {
+      controls = `<button class="btn primary big" data-action="next" data-at="${at}">${lastAlbum ? 'Terminer' : 'Carnet suivant'}</button>`;
+    } else if (lastEntry) {
+      controls = `<p class="waiting">${esc(nameOf(st.hostId))} va ouvrir le carnet suivant…</p>`;
+    } else {
+      controls = g.paused ? '<p class="waiting">⏸ En pause</p>' : '';
+    }
 
     mount(
       `<section class="screen tp-reveal">
         ${topbar()}
-        <div class="roundtag">Carnet ${g.albumIndex + 1}/${g.albumCount}</div>
+        <div class="roundtag">Carnet ${g.albumIndex + 1}/${g.albumCount} · page ${g.entries.length}/${g.entryCount}</div>
         <div class="author">
           ${avatar(g.owner, nameOf(g.owner), 'lg')}
           <div>
@@ -288,23 +408,25 @@
             <strong>${esc(nameOf(g.owner))}</strong>
           </div>
         </div>
-        <ul class="album">${g.entries.map(entryHtml).join('')}</ul>
-        ${
-          host
-            ? `<button class="btn primary big" data-action="next">${label}</button>`
-            : `<p class="waiting">${esc(nameOf(st.hostId))} tourne les pages…</p>`
-        }
+        <ul class="album">${g.entries.map((e, i) => entryHtml(e, i, isNew && i === g.entries.length - 1)).join('')}</ul>
+        ${lastEntry ? summaryHtml(g.entries) : ''}
+        ${controls}
       </section>`,
       'tp-reveal:' + g.round + ':' + g.albumIndex
     );
 
     // Fait défiler jusqu'à la nouvelle page du carnet
-    const seen = g.round + ':' + g.albumIndex + ':' + g.entries.length;
-    if (seen !== revealSeen) {
+    if (isNew) {
       revealSeen = seen;
-      const items = document.querySelectorAll('.album .entry');
-      if (g.entries.length > 1 && items.length) items[items.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const target = lastEntry ? document.querySelector('.tp-summary') || document.querySelector('.album .entry:last-child') : document.querySelector('.album .entry:last-child');
+      if (g.entries.length > 1 && target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+
+    // Page suivante automatique (on laisse plus de temps pour regarder un dessin)
+    if (host && !g.paused && !lastEntry) {
+      const last = g.entries[g.entries.length - 1];
+      scheduleAuto(seen, at, last.kind === 'draw' && !last.skipped ? DRAW_DELAY : TEXT_DELAY);
+    } else clearAuto();
   }
 
   function renderEnd(st) {
@@ -326,6 +448,7 @@
 
   EG.register('telephone', {
     render(st) {
+      if (st.g.phase !== 'reveal') clearAuto();
       switch (st.g.phase) {
         case 'play':
           return renderPlay(st);
@@ -353,6 +476,7 @@
       color(btn) {
         color = btn.dataset.c;
         eraser = false;
+        picking = false;
         updateTools();
       },
       size(btn) {
@@ -362,7 +486,17 @@
       },
       eraser() {
         eraser = !eraser;
+        picking = false;
         updateTools();
+      },
+      pipette() {
+        picking = !picking;
+        if (picking) EG.toast('Touche le dessin pour prendre une couleur');
+        updateTools();
+      },
+      fullscreen() {
+        setFull(!full);
+        rerender();
       },
       undo() {
         if (!canvas) return;
@@ -377,8 +511,12 @@
       force() {
         act({ type: 'force' });
       },
-      next() {
-        act({ type: 'next' });
+      next(btn) {
+        clearAuto();
+        act({ type: 'next', at: btn.dataset.at });
+      },
+      pause() {
+        act({ type: 'pause' });
       },
       again() {
         act({ type: 'again' });
@@ -386,7 +524,12 @@
     },
 
     onInput(t) {
-      if (t.id === 'draft') {
+      if (t.id === 'picker') {
+        color = custom = t.value;
+        eraser = false;
+        picking = false;
+        updateTools();
+      } else if (t.id === 'draft') {
         draft = t.value;
         const c = document.getElementById('count');
         if (c) c.textContent = draft.length + '/' + MAX_CHARS;

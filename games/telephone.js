@@ -54,6 +54,7 @@ function start(room) {
     stepStart: 0,
     revealAlbum: 0,
     revealStep: 0,
+    revealPaused: false,
   };
   startRound(room);
 }
@@ -67,6 +68,7 @@ function startRound(room) {
   g.stepStart = Date.now();
   g.revealAlbum = 0;
   g.revealStep = 0;
+  g.revealPaused = false;
   g.phase = 'play';
 }
 
@@ -123,6 +125,7 @@ function view(room, pid) {
     v.owner = album.owner;
     v.entries = album.entries.slice(0, g.revealStep + 1);
     v.entryCount = album.entries.length;
+    v.paused = g.revealPaused;
   }
   return v;
 }
@@ -170,15 +173,23 @@ function act(room, player, data) {
       return { ok: true };
     }
 
-    // L'hôte dévoile le carnet étape par étape
+    // L'hôte dévoile le carnet étape par étape (son écran avance tout seul, ou il clique).
+    // « at » = la page qu'il voyait : évite de sauter deux pages si le clic et le défilement auto se croisent.
     case 'next': {
       if (!isHost || g.phase !== 'reveal') return { ok: false };
+      if (data.at !== undefined && data.at !== g.revealAlbum + ':' + g.revealStep) return { ok: false };
       const album = g.albums[g.revealAlbum];
       if (g.revealStep + 1 < album.entries.length) g.revealStep += 1;
       else if (g.revealAlbum + 1 < g.albums.length) {
         g.revealAlbum += 1;
         g.revealStep = 0;
       } else g.phase = 'end';
+      return { ok: true };
+    }
+
+    case 'pause': {
+      if (!isHost || g.phase !== 'reveal') return { ok: false };
+      g.revealPaused = !g.revealPaused;
       return { ok: true };
     }
 
