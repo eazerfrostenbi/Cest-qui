@@ -82,8 +82,14 @@ body {
   color: var(--accent2);
 }
 
-.link {
+.top .actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.link {
   background: none;
   border: 0;
   color: var(--muted);
@@ -138,50 +144,6 @@ body {
   background: var(--line);
 }
 
-.auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.auth-tabs .btn {
-  min-height: 46px;
-  padding: 0 8px;
-  font-size: 0.9rem;
-}
-
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.profile-info {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.profile-info b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.profile-info span {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.avatar-preview {
-  width: 88px;
-  height: 88px;
-  align-self: center;
-  border: 3px solid var(--accent);
-  border-radius: 50%;
-  object-fit: cover;
-}
-
 /* ---------- Cartes ---------- */
 .card {
   background: var(--card);
@@ -234,8 +196,7 @@ body {
 }
 
 input,
-textarea,
-select {
+textarea {
   width: 100%;
   background: #17123a;
   color: var(--text);
@@ -249,13 +210,8 @@ select {
 }
 
 input:focus,
-textarea:focus,
-select:focus {
+textarea:focus {
   border-color: var(--accent);
-}
-
-select {
-  cursor: pointer;
 }
 
 textarea {
@@ -415,14 +371,6 @@ textarea {
   font-weight: 900;
   color: #1a1238;
   background: hsl(var(--h, 300) 75% 62%);
-  overflow: hidden;
-}
-
-.avatar img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .avatar.lg {
@@ -435,13 +383,6 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.category-name {
-  margin: 0;
-  color: var(--accent2);
-  font-size: 1.2rem;
-  font-weight: 900;
 }
 
 .rounds > span {
@@ -803,4 +744,263 @@ textarea {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---------- Choix du jeu (salon) ---------- */
+.modes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mode {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: var(--card2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mode .mi {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.mode .mt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode .mt b {
+  font-size: 1.05rem;
+}
+
+.mode .mt small {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.mode.active {
+  border-color: var(--accent2);
+  background: #3d3170;
+}
+
+.mode:disabled {
+  cursor: default;
+}
+
+.mode:disabled:not(.active) {
+  opacity: 0.45;
+}
+
+/* ---------- L'imposteur ---------- */
+.secret {
+  background: linear-gradient(135deg, #3a2a85, #5a2a7e);
+}
+
+.bigword {
+  font-size: clamp(2rem, 11vw, 3rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.rules {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.rules b {
+  color: var(--text);
+}
+
+.wordbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, #3a2a85, #5a2a7e);
+  border-radius: 14px;
+  padding: 10px 16px;
+}
+
+.wordbar small {
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.wordbar strong {
+  font-size: 1.3rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.cluetable {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cluetable li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 8px 12px 8px 8px;
+}
+
+.cluetable li.cur {
+  border-color: var(--accent2);
+  background: #3d3170;
+}
+
+.cluetable li.off {
+  opacity: 0.5;
+}
+
+.cluetable .pname {
+  min-width: 0;
+  flex: 1;
+}
+
+.cluetable .cls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cluetable .cl {
+  background: var(--card2);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.cluetable .cl.none {
+  background: none;
+  color: var(--muted);
+  padding: 3px 6px;
+}
+
+.cluetable .cl.wait {
+  background: rgba(255, 210, 63, 0.18);
+  color: var(--accent2);
+}
+
+.words2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.words2 > div {
+  background: var(--card2);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.words2 > div.imp {
+  background: rgba(255, 79, 154, 0.2);
+}
+
+.words2 small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.words2 b {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+
+.tally {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tally li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 12px;
+  background: var(--card2);
+}
+
+.tally li.imp {
+  background: rgba(255, 79, 154, 0.2);
+}
+
+.tally .pname {
+  flex: none;
+  max-width: 34%;
+}
+
+.tally .bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.tally .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+.tally .n {
+  font-weight: 900;
+  min-width: 1.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tally .gain {
+  color: var(--good);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.who {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
 }

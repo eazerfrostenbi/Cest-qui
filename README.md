@@ -1,11 +1,61 @@
-# C'est qui ?!
+# Eazerfrost Games
 
-Un jeu entre potes, à jouer à distance, chacun sur son téléphone ou son ordinateur.
+Des jeux entre potes, à jouer à distance, chacun sur son téléphone ou son ordinateur. 3 à 12 joueurs. L'hôte crée un salon, partage le lien, puis choisit le jeu.
 
-**Le principe** : un énoncé apparaît (« Ta première fois que… »), chacun écrit son anecdote en secret. Ensuite les anecdotes défilent une par une, sans nom, et tout le monde doit deviner qui l'a écrite.
+## Les jeux
 
-**Les points** : +1 quand tu devines juste, +1 par personne que tu as trompée avec ta propre anecdote.
+**C'est qui ?!** — Un énoncé apparaît (« Ta première fois que… »), chacun écrit son anecdote en secret. Les anecdotes défilent une par une, sans nom, et tout le monde devine qui l'a écrite. +1 point si tu devines juste, +1 par personne que tu as trompée.
 
-3 à 12 joueurs. Si quelqu'un coupe sa connexion (téléphone en veille, réseau qui saute), il retrouve sa place en rouvrant la page.
+**L'imposteur** — Tout le monde reçoit le même mot, sauf un joueur qui reçoit un mot proche (par exemple « Plage » et « Piscine »). L'imposteur ne sait pas qu'il l'est. À tour de rôle (2 tours), chacun donne un indice d'un mot. Puis tout le monde vote pour démasquer celui qui a un mot différent. Si l'imposteur est démasqué (le plus voté, sans égalité), ceux qui ont voté pour lui gagnent 2 points. Sinon, l'imposteur gagne 3 points. Mieux à partir de 4 joueurs.
 
-Chaque joueur crée un compte avec un pseudo et un mot de passe (8 caractères minimum). La photo de profil est facultative et modifiable depuis l'accueil. Les mots de passe sont hachés côté serveur ; les sessions expirent après 30 jours. Aucun email n'est demandé : il n'y a pas de récupération automatique en cas de mot de passe oublié.
+## 1. Lancer le jeu sur ton ordinateur
+
+Il faut [Node.js](https://nodejs.org) version 18 ou plus.
+
+```bash
+npm install
+npm start
+```
+
+Puis ouvre http://localhost:3000.
+
+**Tester seul :** ouvre `http://localhost:3000/?test=1` dans 3 onglets. Avec `?test=1`, chaque onglet est un joueur différent (sans cette option, tous les onglets d'un même navigateur comptent pour un seul joueur). Les amis qui rejoignent par ton lien d'invitation n'ont pas besoin de ça.
+
+## 2. Mise en ligne (Render, gratuit)
+
+1. Envoie le contenu de ce dossier sur ton dépôt GitHub (`server.js`, `package.json`, `README.md`, et les dossiers `games` et `public`).
+2. Sur [render.com](https://render.com), le service se met à jour tout seul à chaque changement du dépôt.
+3. Réglages du service : **Build Command** `npm install`, **Start Command** `npm start`, **Instance type** Free.
+
+Sur l'offre gratuite, le site s'endort après un moment sans visite : le premier chargement peut prendre environ une minute. Les salons sont gardés en mémoire : si le serveur redémarre, les parties en cours sont perdues.
+
+## 3. Personnaliser
+
+- **Les énoncés de C'est qui ?!** : `games/anecdotes-prompts.js`. Une ligne par énoncé, entre guillemets, avec une virgule à la fin.
+- **Les paires de mots de L'imposteur** : `games/impostor-words.js`. Une ligne `["Mot A", "Mot B"],` par paire. Choisis des mots proches mais pas identiques.
+- **Les réglages** : nombre de tours d'indices (`CLUE_ROUNDS`) et points (`POINTS_FOUND`, `POINTS_HIDDEN`) en haut de `games/impostor.js`. Nombre de joueurs min dans chaque jeu (`minPlayers`), max (`MAX_PLAYERS`) dans `server.js`.
+- **Les couleurs** : variables en haut de `public/style.css`.
+
+## 4. Ajouter un nouveau jeu
+
+1. Crée `games/monjeu.js` sur le modèle de `games/impostor.js` : il exporte `id`, `name`, `emoji`, `tagline`, `minPlayers`, et les fonctions `start`, `view`, `act`, `progress`.
+2. Ajoute-le dans la liste `GAMES` en haut de `server.js`.
+3. Crée `public/games/monjeu.js` (l'interface) qui s'enregistre avec `EG.register('monjeu', { render, actions })`, et ajoute la balise `<script>` dans `public/index.html`.
+
+Le salon, la reconnexion, les scores et le classement final sont déjà gérés pour tous les jeux.
+
+## Organisation des fichiers
+
+```
+server.js                    salons, joueurs, reconnexion (commun à tous les jeux)
+games/anecdotes.js           moteur de « C'est qui ?! »
+games/anecdotes-prompts.js   liste des énoncés
+games/impostor.js            moteur de « L'imposteur »
+games/impostor-words.js      liste des paires de mots
+games/util.js                petits outils partagés
+public/index.html            page unique
+public/app.js                accueil, salon, connexion (commun)
+public/games/anecdotes.js    écrans de « C'est qui ?! »
+public/games/impostor.js     écrans de « L'imposteur »
+public/style.css             style, pensé pour mobile
+```
