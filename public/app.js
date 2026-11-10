@@ -311,14 +311,18 @@
         ${
           host
             ? `<div class="card">
-                <div class="rounds">
+                ${
+                  cur.rounds === false
+                    ? ''
+                    : `<div class="rounds">
                   <span>Nombre de manches</span>
                   <div class="stepper">
                     <button data-action="rounds-" aria-label="Moins">−</button>
                     <b>${rounds}</b>
                     <button data-action="rounds+" aria-label="Plus">+</button>
                   </div>
-                </div>
+                </div>`
+                }
                 <button class="btn primary big" data-action="start" ${online < cur.minPlayers ? 'disabled' : ''}>Lancer la partie</button>
                 ${online < cur.minPlayers ? `<p class="hint">Il faut au moins ${cur.minPlayers} joueurs (${online}/${cur.minPlayers})</p>` : ''}
               </div>`

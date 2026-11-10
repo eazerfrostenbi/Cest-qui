@@ -14,6 +14,7 @@ const { connectedPlayers } = require('./games/util');
 const GAMES = {
   anecdotes: require('./games/anecdotes'),
   impostor: require('./games/impostor'),
+  telephone: require('./games/telephone'),
 };
 const DEFAULT_MODE = 'anecdotes';
 
@@ -71,6 +72,7 @@ function modeList() {
     emoji: g.emoji,
     tagline: g.tagline,
     minPlayers: g.minPlayers,
+    rounds: g.rounds !== false, // false : pas de réglage « nombre de manches » dans le salon
   }));
 }
 
