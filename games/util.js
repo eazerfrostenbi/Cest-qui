@@ -29,4 +29,14 @@ function parseRounds(v, def = 3) {
   return r >= 1 && r <= 10 ? r : def;
 }
 
-module.exports = { shuffle, connectedPlayers, normalize, parseRounds };
+// Réglages du salon propres à un jeu : on ne garde que les valeurs prévues, sinon la valeur par défaut
+function readSettings(defs, raw) {
+  const out = {};
+  for (const d of defs || []) {
+    const v = Number(raw && raw[d.key]);
+    out[d.key] = d.options.includes(v) ? v : d.def;
+  }
+  return out;
+}
+
+module.exports = { shuffle, connectedPlayers, normalize, parseRounds, readSettings };

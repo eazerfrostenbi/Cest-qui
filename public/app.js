@@ -64,6 +64,7 @@
   let homeCode = '';
   let homeError = '';
   let rounds = 3;
+  let settings = {}; // réglages propres à chaque jeu : { 'bomb.lives': 3, … }
   let lastViewKey = '';
   let toastTimer = null;
   let pending = false;
@@ -276,9 +277,39 @@
     </li>`;
   }
 
+  const currentMode = () => {
+    const modes = state.modes || [];
+    return modes.find((m) => m.id === state.mode) || modes[0] || { minPlayers: 3, name: '', settings: [] };
+  };
+
+  function settingValue(mode, s) {
+    const v = settings[mode.id + '.' + s.key];
+    return s.options.includes(v) ? v : s.def;
+  }
+
+  function settingRow(mode, s) {
+    return `<div class="rounds">
+      <span>${esc(s.label)}</span>
+      <div class="stepper">
+        <button data-action="set-" data-key="${esc(s.key)}" aria-label="Moins">−</button>
+        <b>${settingValue(mode, s)}${esc(s.unit || '')}</b>
+        <button data-action="set+" data-key="${esc(s.key)}" aria-label="Plus">+</button>
+      </div>
+    </div>`;
+  }
+
+  function stepSetting(key, dir) {
+    const mode = currentMode();
+    const s = (mode.settings || []).find((x) => x.key === key);
+    if (!s) return;
+    const i = s.options.indexOf(settingValue(mode, s)) + dir;
+    settings[mode.id + '.' + key] = s.options[Math.max(0, Math.min(s.options.length - 1, i))];
+    renderLobby();
+  }
+
   function renderLobby() {
     const modes = state.modes || [];
-    const cur = modes.find((m) => m.id === state.mode) || modes[0] || { minPlayers: 3, name: '' };
+    const cur = currentMode();
     const online = state.players.filter((p) => p.connected).length;
     const host = amHost();
     const hostName = nameOf(state.hostId);
@@ -323,6 +354,7 @@
                   </div>
                 </div>`
                 }
+                ${(cur.settings || []).map((s) => settingRow(cur, s)).join('')}
                 <button class="btn primary big" data-action="start" ${online < cur.minPlayers ? 'disabled' : ''}>Lancer la partie</button>
                 ${online < cur.minPlayers ? `<p class="hint">Il faut au moins ${cur.minPlayers} joueurs (${online}/${cur.minPlayers})</p>` : ''}
               </div>`
@@ -435,12 +467,22 @@
       renderLobby();
     },
 
+    'set-'(btn) {
+      stepSetting(btn.dataset.key, -1);
+    },
+    'set+'(btn) {
+      stepSetting(btn.dataset.key, 1);
+    },
+
     mode(btn) {
       socket.emit('setMode', { mode: btn.dataset.mode });
     },
 
     start() {
-      socket.emit('start', { rounds }, (res) => {
+      const mode = currentMode();
+      const chosen = {};
+      for (const s of mode.settings || []) chosen[s.key] = settingValue(mode, s);
+      socket.emit('start', { rounds, settings: chosen }, (res) => {
         if (res && !res.ok) toast(res.error);
       });
     },

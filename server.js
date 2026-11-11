@@ -15,6 +15,7 @@ const GAMES = {
   anecdotes: require('./games/anecdotes'),
   impostor: require('./games/impostor'),
   telephone: require('./games/telephone'),
+  bomb: require('./games/bomb'),
 };
 const DEFAULT_MODE = 'anecdotes';
 
@@ -60,6 +61,7 @@ function createRoom(hostId) {
     mode: DEFAULT_MODE,
     g: null, // état du jeu en cours (géré par le module du jeu)
     cleanup: null,
+    notify: () => broadcast(room), // pour les jeux qui avancent tout seuls (minuteur)
   };
   rooms.set(room.code, room);
   return room;
@@ -73,6 +75,7 @@ function modeList() {
     tagline: g.tagline,
     minPlayers: g.minPlayers,
     rounds: g.rounds !== false, // false : pas de réglage « nombre de manches » dans le salon
+    settings: g.settings || [], // réglages en plus, propres au jeu (ex : nombre de vies)
   }));
 }
 
@@ -217,7 +220,7 @@ io.on('connection', (socket) => {
     }
     for (const p of room.players.values()) p.score = 0;
     room.phase = 'playing';
-    game.start(room, { rounds: data && data.rounds });
+    game.start(room, { rounds: data && data.rounds, settings: data && data.settings });
     reply(cb, { ok: true });
     broadcast(room);
   });
